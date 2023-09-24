@@ -1,61 +1,76 @@
-import { useEffect, useState } from "react";
+// useEffect をインポート
+import { useEffect, useState, useCallback } from "react";
 import PokemonThumbnails from "./PokemonThumbnails";
 
-import "./App.css";
-import "./index.css";
-
 function App() {
-  const [pokemonNames, setPokemonNames] = useState([]);
+  const [allPokemons, setAllPokemons] = useState([]);
+  const [url, setUrl] = useState("https://pokeapi.co/api/v2/pokemon?limit=20");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const pokemons = [
-    {
-      id: 1,
-      image:
-        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png",
-      type: "くさ",
-    },
-    {
-      id: 2,
-      image:
-        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/2.png",
-      type: "くさ",
-    },
-    {
-      id: 3,
-      image:
-        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/3.png",
-      type: "くさ",
-    },
-  ];
-
-  const url = "https://pokeapi.co/api/v2/pokemon";
-
-  useEffect(() => {
+  const getAllPokemons = useCallback(() => {
+    setIsLoading(true);
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data.results[0].name);
-        // 仮で３つのポケモンの名前をセットする
-        const names = [
-          data.results[0].name,
-          data.results[1].name,
-          data.results[2].name,
-        ];
-        setPokemonNames(names);
+        console.log(data.results);
+        setAllPokemons(data.results);
+        createPokemonObject(data.results);
+        setUrl(data.next);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-  }, []);
+  }, [url]);
+
+  const createPokemonObject = (results) => {
+    results.forEach((pokemon) => {
+      const pokemonUrl = `https://pokeapi.co/api/v2/pokemon/${pokemon.name}`;
+      fetch(pokemonUrl)
+        .then((res) => res.json())
+        .then((data) => {
+          const _image = data.sprites.other["official-artwork"].front_default;
+          const _iconImage = data.sprites.other.dream_world.front_default;
+          const _type = data.types[0].type.name;
+          const newList = {
+            id: data.id,
+            name: data.name,
+            iconImage: _iconImage,
+            image: _image,
+            type: _type,
+          };
+          setAllPokemons((currentList) => [...currentList, newList]);
+        });
+    });
+  };
+
+  useEffect(() => {
+    getAllPokemons();
+  }, [getAllPokemons]);
 
   return (
-    <div className="App">
-      {pokemons.map((pokemon, index) => (
-        <PokemonThumbnails
-          id={pokemon.id}
-          name={pokemonNames[index]}
-          image={pokemon.image}
-          type={pokemon.type}
-          key={index}
-        />
-      ))}
+    <div className="app-container">
+      <h1>ポケモン図鑑</h1>
+      <div className="pokemon-container">
+        <div className="all-container">
+          {allPokemons.map((pokemon, index) => (
+            <PokemonThumbnails
+              id={pokemon.id}
+              name={pokemon.name}
+              image={pokemon.image}
+              iconImage={pokemon.iconImage}
+              type={pokemon.type}
+              key={index}
+            />
+          ))}
+        </div>
+        {isLoading ? (
+          <div className="load-more">now loading...</div>
+        ) : (
+          <button className="load-more" onClick={getAllPokemons}>
+            もっとみる
+          </button>
+        )}
+      </div>
     </div>
   );
 }
