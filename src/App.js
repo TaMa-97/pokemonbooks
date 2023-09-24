@@ -1,26 +1,28 @@
-// useEffect をインポート
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import PokemonThumbnails from "./PokemonThumbnails";
 
 function App() {
   const [allPokemons, setAllPokemons] = useState([]);
+
+  // APIからデータ取得
+  // パラメータにlimitを設定し20件取得
   const [url, setUrl] = useState("https://pokeapi.co/api/v2/pokemon?limit=20");
   const [isLoading, setIsLoading] = useState(false);
 
-  const getAllPokemons = useCallback(() => {
+  const getAllPokemons = () => {
     setIsLoading(true);
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data.results);
-        setAllPokemons(data.results);
-        createPokemonObject(data.results);
+        // 次の20件をURLにセット
         setUrl(data.next);
+        createPokemonObject(data.results);
       })
       .finally(() => {
+        allPokemons.sort((a, b) => a.id - b.id);
         setIsLoading(false);
       });
-  }, [url]);
+  };
 
   const createPokemonObject = (results) => {
     results.forEach((pokemon) => {
@@ -38,6 +40,7 @@ function App() {
             image: _image,
             type: _type,
           };
+          // 既存のデータを展開し、新しいデータを追加する
           setAllPokemons((currentList) => [...currentList, newList]);
         });
     });
@@ -45,7 +48,7 @@ function App() {
 
   useEffect(() => {
     getAllPokemons();
-  }, [getAllPokemons]);
+  }, []);
 
   return (
     <div className="app-container">
